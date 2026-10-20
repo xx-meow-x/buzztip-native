@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// Same gate as firestore.rules: verified @tip.edu.ph accounts only.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isTip() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('[^@]+@tip\\.edu\\.ph');
+    }
+    function validImage() {
+      return request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/.*');
+    }
+
+    // Profile pictures and listing photos live under <folder>/<your uid>/...
+    match /avatars/{userId}/{file} {
+      allow read: if isTip();
+      allow create, update: if isTip() && request.auth.uid == userId && validImage();
+      allow delete: if isTip() && request.auth.uid == userId;
+    }
+    match /listings/{userId}/{file} {
+      allow read: if isTip();
+      allow create, update: if isTip() && request.auth.uid == userId && validImage();
+      allow delete: if isTip() && request.auth.uid == userId;
+    }
+  }
+}

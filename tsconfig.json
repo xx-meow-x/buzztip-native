@@ -1,6 +1,13 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
-  }
+    "strict": true,
+    "paths": {
+      // Firebase's default typings are for the web. This points TypeScript at the React Native
+      // typings so getReactNativePersistence is recognised. (Runtime already uses the RN build.)
+      "@firebase/auth": ["./node_modules/@firebase/auth/dist/index.rn.d.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "functions", "scripts"]
 }

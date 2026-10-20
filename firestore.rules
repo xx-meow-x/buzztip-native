@@ -1,0 +1,150 @@
+rules_version = '2';
+
+// BuzzTip security rules.
+//
+// THE GATE: every rule below starts with isTip(). It requires a signed-in account whose email
+// is verified AND ends in @tip.edu.ph. Anyone else (wrong domain, unverified, signed out)
+// cannot read or write anything, no matter what the app does. Change the domain in 3 places:
+// here, storage.rules, and functions/index.js (+ src/config.js for the UI).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function uid() { return request.auth.uid; }
+    function isTip() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('[^@]+@tip\\.edu\\.ph');
+    }
+    // Admins are set with a custom claim (scripts/set-admin.js). Used for announcements.
+    function isAdmin() { return isTip() && request.auth.token.admin == true; }
+
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // True when the update only adds or only removes the caller's own uid in array field f.
+    function onlySelfIn(f) {
+      let before = resource.data[f].toSet();
+      let after = request.resource.data[f].toSet();
+      return changed().hasOnly([f])
+        && ((after.difference(before) == [uid()].toSet() && before.difference(after).size() == 0)
+         || (before.difference(after) == [uid()].toSet() && after.difference(before).size() == 0));
+    }
+
+    /* ---------- Users ---------- */
+    match /users/{userId} {
+      allow read: if isTip();
+      // 'courses' can't be set from the app: it comes from enrollment records (server only).
+      allow create: if isTip() && userId == uid()
+        && request.resource.data.courses.size() == 0
+        && request.resource.data.keys().hasOnly(['name', 'nameLower', 'label', 'program', 'courses', 'color', 'avatar', 'createdAt']);
+      allow update: if isTip() && userId == uid()
+        && changed().hasOnly(['name', 'nameLower', 'label', 'program', 'avatar']);
+
+      // Private to the owner
+      match /reminders/{rid} { allow read, write: if isTip() && userId == uid(); }
+      match /wallMine/{wid} { allow read, write: if isTip() && userId == uid(); }
+    }
+
+    /* ---------- Groups ---------- */
+    match /groups/{gid} {
+      allow read: if isTip();
+      allow create: if isTip()
+        && request.resource.data.createdBy == uid()
+        && request.resource.data.isCourse == false
+        && uid() in request.resource.data.memberIds
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60;
+      // Join / leave yourself. Course groups can't be changed from the app.
+      allow update: if isTip() && resource.data.isCourse == false && onlySelfIn('memberIds');
+      allow delete: if false;
+    }
+
+    /* ---------- Chats ---------- */
+    match /conversations/{cid} {
+      // 'resource == null' lets the app check whether a DM already exists before creating it.
+      allow get: if isTip() && (resource == null || uid() in resource.data.memberIds);
+      allow list: if isTip() && uid() in resource.data.memberIds;
+
+      allow create: if isTip()
+        && uid() in request.resource.data.memberIds
+        && request.resource.data.isCourse == false
+        && (
+          (request.resource.data.type == 'dm' && request.resource.data.memberIds.size() == 2)
+          || (request.resource.data.type == 'group'
+              && cid == 'c_' + request.resource.data.groupId
+              && getAfter(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.createdBy == uid())
+        );
+
+      allow update: if isTip() && (
+        // members update the "last message" summary and their own read marker
+        (uid() in resource.data.memberIds
+          && changed().hasOnly(['lastText', 'lastFrom', 'lastFromName', 'lastAt', 'readAt']))
+        // anyone can join or leave a non-course group chat (themselves only)
+        || (resource.data.type == 'group' && resource.data.isCourse == false && onlySelfIn('memberIds'))
+      );
+
+      match /messages/{mid} {
+        allow read: if isTip() && uid() in get(/databases/$(database)/documents/conversations/$(cid)).data.memberIds;
+        allow create: if isTip()
+          && request.resource.data.from == uid()
+          && uid() in getAfter(/databases/$(database)/documents/conversations/$(cid)).data.memberIds
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000
+          && request.resource.data.keys().hasOnly(['from', 'fromName', 'text', 'at', 'system']);
+        allow update, delete: if false;
+      }
+    }
+
+    /* ---------- Campus feed ---------- */
+    match /posts/{id} {
+      allow read: if isTip();
+      allow create: if isTip() && request.resource.data.authorId == uid()
+        && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 500
+        && request.resource.data.likedBy.size() == 0;
+      allow update: if isTip() && onlySelfIn('likedBy');
+      allow delete: if isTip() && resource.data.authorId == uid();
+    }
+
+    /* ---------- Announcements (admins post, everyone saves) ---------- */
+    match /announcements/{id} {
+      allow read: if isTip();
+      allow create: if isAdmin() && request.resource.data.authorId == uid();
+      allow update: if isTip() && onlySelfIn('savedBy');
+      allow delete: if isAdmin();
+    }
+
+    /* ---------- Events ---------- */
+    match /events/{id} {
+      allow read: if isTip();
+      allow create: if isTip() && request.resource.data.authorId == uid() && request.resource.data.goingIds == [uid()];
+      allow update: if isTip() && onlySelfIn('goingIds');
+      allow delete: if isTip() && resource.data.authorId == uid();
+    }
+
+    /* ---------- Marketplace ---------- */
+    match /listings/{id} {
+      allow read: if isTip();
+      allow create: if isTip() && request.resource.data.by == uid() && request.resource.data.price >= 0;
+      allow update: if isTip() && resource.data.by == uid() && changed().hasOnly(['sold']);
+      allow delete: if isTip() && resource.data.by == uid();
+    }
+
+    /* ---------- Lost & Found ---------- */
+    match /lostFound/{id} {
+      allow read: if isTip();
+      allow create: if isTip() && request.resource.data.by == uid();
+      allow update: if isTip() && resource.data.by == uid() && changed().hasOnly(['resolved']);
+      allow delete: if isTip() && resource.data.by == uid();
+    }
+
+    /* ---------- Freedom Wall (no author field is ever stored) ---------- */
+    match /wall/{id} {
+      allow read: if isTip();
+      allow create: if isTip()
+        && request.resource.data.keys().hasOnly(['alias', 'body', 'buzzedBy', 'at'])
+        && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 280
+        && request.resource.data.buzzedBy.size() == 0;
+      allow update: if isTip() && onlySelfIn('buzzedBy');
+      allow delete: if isAdmin();
+    }
+  }
+}

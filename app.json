@@ -1,25 +1,16 @@
 {
   "expo": {
-    "name": "buzztip-native",
-    "slug": "buzztip-native",
-    "version": "1.0.0",
+    "name": "BuzzTip",
+    "slug": "buzztip",
+    "version": "0.2.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "userInterfaceStyle": "automatic",
+    "scheme": "buzztip",
+    "ios": { "supportsTablet": false, "bundleIdentifier": "ph.edu.tip.buzztip" },
+    "android": { "package": "ph.edu.tip.buzztip" },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": [
+      ["expo-image-picker", { "photosPermission": "BuzzTip needs your photos so you can add pictures to listings and your profile." }]
+    ]
   }
 }

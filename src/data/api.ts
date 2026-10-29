@@ -119,9 +119,10 @@ export function createApi(uid: string, me: Me) {
     toggleBuzz: (w: WallPost) => updateDoc(doc(db, 'wall', w.id), { buzzedBy: toggle(w.buzzedBy, uid) }),
 
     /* ---------- Profile ---------- */
-    async updateProfile({ name, label, program, avatarUri, removeAvatar }: { name: string; label: string; program: string; avatarUri?: string; removeAvatar?: boolean }) {
+    async updateProfile({ name, label, program, avatarUri, avatarPreset, removeAvatar }: { name: string; label: string; program: string; avatarUri?: string; avatarPreset?: string; removeAvatar?: boolean }) {
       const patch: Record<string, string> = { name, nameLower: name.toLowerCase(), label, program }
       if (avatarUri) patch.avatar = await uploadImage('avatars', uid, avatarUri)
+      else if (avatarPreset) patch.avatar = avatarPreset
       else if (removeAvatar) patch.avatar = ''
       await updateDoc(doc(db, 'users', uid), patch)
     },

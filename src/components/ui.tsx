@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { fonts, radii, useTheme, type Theme } from '../theme'
 import { Icon } from './Icon'
 import { initials as toInitials } from '../lib/format'
+import { AvatarArtwork, getAvatarPreset } from '../assets/avatars'
 
 // Text with the app font and theme color. w: body | medium | semi | bold | display
 interface TProps extends TextProps {
@@ -57,9 +58,11 @@ export function ThemeToggle() {
 
 export function Avatar({ name = '', initials, color = '#888', src, size = 38, children }: { name?: string; initials?: string; color?: string; src?: string; size?: number; children?: ReactNode }) {
   const { t } = useTheme()
+  const preset = getAvatarPreset(src)
   return (
     <View style={{ width: size, height: size, borderRadius: radii.avatar, backgroundColor: src ? t.surface2 : color, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-      {src ? <Image source={{ uri: src }} style={{ width: '100%', height: '100%' }} />
+      {preset ? <AvatarArtwork id={preset.id} />
+        : src ? <Image source={{ uri: src }} style={{ width: '100%', height: '100%' }} />
         : children ? <Text style={{ fontSize: size * 0.45 }}>{children}</Text>
         : <Text style={{ color: '#fff', fontFamily: fonts.bold, fontSize: Math.max(10, size * 0.32) }}>{initials || toInitials(name)}</Text>}
     </View>

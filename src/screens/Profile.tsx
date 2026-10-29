@@ -1,8 +1,8 @@
-import { Image, Pressable, View } from 'react-native'
+import { Pressable, View } from 'react-native'
 import { ICONS } from '../assets/icons'
 import { BottomNav } from '../components/BottomNav'
 import { ScreenHeader } from '../components/ScreenHeader'
-import { Body, Screen, T } from '../components/ui'
+import { Avatar, Body, Screen, T } from '../components/ui'
 import { useApp } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { useUI } from '../context/UIContext'
@@ -35,7 +35,7 @@ export default function Profile({ navigation }: ScreenProps<'Profile'>) {
       <Body>
         <View style={{ alignItems: 'center', paddingVertical: 14 }}>
           <View style={{ width: 84, height: 84, borderRadius: radii.avatar + 4, borderWidth: 2, borderColor: t.accent, backgroundColor: t.surface2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 10 }}>
-            {me.avatar ? <Image source={{ uri: me.avatar }} style={{ width: '100%', height: '100%' }} /> : <T size={36}>{ICONS.profile}</T>}
+            <Avatar name={me.name} color={t.surface2} src={me.avatar || undefined} size={80}>{ICONS.profile}</Avatar>
           </View>
           <T w="bold" size={18}>{me.name}</T>
           <T size={12} muted>{me.email}{me.label ? ` · ${me.label}` : ''}</T>

@@ -87,7 +87,7 @@ React Native, Firebase, React Navigation and Expo type definitions.
 ## 8. Known limits
 
 
-- currently unable to implement any photo uploads due to Firebase limitations. everything else should work
+- Photo uploads are unavailable due to Firebase limitations; built-in bee and flower profile avatars can still be selected.
 - Unread is only a gold dot and not a count. The Chats tab badge counts chats with something new.
 - Everything subscribes at sign-in (capped lists). For thousands of users, move each subscription into its screen and paginate.
 - Display names are copied into posts and chats when created, so renaming yourself doesn't update old ones.
@@ -111,5 +111,4 @@ Firebase prints a `https://<project-id>.web.app` link to share. Notes:
 - Redeploy (the last two commands) after every change. Phones running the app through Expo Go see changes live, the website does not.
 - If the deploy says there is no Hosting site, open Hosting in the Firebase console and press Get started once.
 - On wide screens the app shows as a centered phone-width column. Phones show it full screen.
-
 
